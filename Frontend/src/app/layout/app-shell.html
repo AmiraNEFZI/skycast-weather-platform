@@ -1,0 +1,73 @@
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+<header class="header">
+  <div class="frame header-inner">
+    <a class="brand" routerLink="/" [queryParams]="activeCity.navigationParams()" (click)="menuOpen.set(false)">
+      <span class="brand-mark" aria-hidden="true">⛅</span> SkyCast
+    </a>
+    <button
+      #menuButton
+      class="button button-secondary menu-button"
+      type="button"
+      aria-controls="navigation"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="menuOpen.update((open) => !open)"
+    >Menu</button>
+    <nav
+      id="navigation"
+      aria-label="Navigation principale"
+      [class.menu-open]="menuOpen()"
+      (keydown.escape)="menuOpen.set(false); menuButton.focus()"
+    >
+      <a routerLink="/" [queryParams]="activeCity.navigationParams()"
+        routerLinkActive="active" [routerLinkActiveOptions]="routeMatch"
+        ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Tableau de bord</a>
+      <a routerLink="/previsions" [queryParams]="activeCity.navigationParams()"
+        routerLinkActive="active" [routerLinkActiveOptions]="routeMatch"
+        ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Prévisions</a>
+      <a routerLink="/cartes" [queryParams]="activeCity.navigationParams()"
+        routerLinkActive="active" [routerLinkActiveOptions]="routeMatch"
+        ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Cartes</a>
+      <a routerLink="/air-et-uv" [queryParams]="activeCity.navigationParams()"
+        routerLinkActive="active" [routerLinkActiveOptions]="routeMatch"
+        ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Air et UV</a>
+      <a routerLink="/alertes" [queryParams]="activeCity.navigationParams()"
+        routerLinkActive="active" [routerLinkActiveOptions]="routeMatch"
+        ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Alertes</a>
+      <a routerLink="/favoris" [queryParams]="activeCity.navigationParams()"
+        routerLinkActive="active" [routerLinkActiveOptions]="routeMatch"
+        ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Favoris</a>
+      @if (session().role === 'admin') {
+        <a routerLink="/administration" [queryParams]="activeCity.navigationParams()"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page" (click)="menuOpen.set(false)">Administration</a>
+      }
+    </nav>
+    <app-city-search class="search" />
+    <app-account-menu class="account" />
+  </div>
+</header>
+<main class="frame content" id="contenu" tabindex="-1">
+  @if (activeCity.state(); as state) {
+    @if (state.status === 'success' && state.invalidLink) {
+      <div class="card city-notice" role="status">
+        Ville inconnue dans le lien. {{ state.city.name }} est affichée.
+        <button type="button" class="button button-secondary" (click)="activeCity.select(state.city.id, true)">
+          Mettre à jour le lien
+        </button>
+      </div>
+    }
+  }
+  <ng-content />
+</main>
+<footer class="footer">
+  <div class="frame footer-inner">
+    <p><strong>SkyCast</strong> · Application météo universitaire</p>
+    <fieldset class="theme-picker">
+      <legend class="visually-hidden">Thème d’affichage</legend>
+      <label><input type="radio" name="theme" [checked]="themes.theme() === 'light'"
+        (change)="themes.setTheme('light')" /> Ciel Clair</label>
+      <label><input type="radio" name="theme" [checked]="themes.theme() === 'dark'"
+        (change)="themes.setTheme('dark')" /> Horizon</label>
+    </fieldset>
+  </div>
+</footer>

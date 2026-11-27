@@ -1,0 +1,75 @@
+<div class="heading-row page-title dashboard-heading">
+  <h1>Tableau de bord</h1>
+  <div class="heading-row dashboard-tools">
+    <span class="badge">Données de démonstration</span>
+    <app-position-action />
+  </div>
+</div>
+
+@if (resetNotice) {
+  <p class="card" role="status">Démonstration réinitialisée. Le jeu initial est restauré.</p>
+}
+
+<div class="section-stack dashboard-stack">
+  <app-content-state [status]="activeCity.state().status" errorMessage="La ville est indisponible."
+    (retry)="activeCity.retry()">
+    @if (activeCity.city(); as city) {
+      <div class="section-stack dashboard-stack">
+        <div class="weather-grid">
+          <app-weather-card [city]="city" />
+          <app-air-summary [city]="city" [initialFailure]="showAirFailure()" />
+        </div>
+        <app-seven-days [city]="city" />
+
+        <div class="dashboard-shortcuts">
+          <section class="card">
+            <h2>Villes favorites</h2>
+            @if (session().role === 'user') {
+              <app-content-state [status]="favorites.state().status" (retry)="favorites.retry()">
+                <div class="form-buttons">
+                  @for (favorite of favorites.state().value; track favorite.id) {
+                    <button type="button" class="button button-secondary" (click)="activeCity.select(favorite.cityId)">
+                      {{ favorite.alias ? favorite.alias + ' · ' : '' }}{{ favorite.cityName }}
+                    </button>
+                  } @empty { <p>Aucun favori.</p> }
+                </div>
+              </app-content-state>
+              <p><a routerLink="/favoris" [queryParams]="{ ville: city.id }">Voir mes favoris</a></p>
+            } @else {
+              <p class="muted">Ouvrez Compte pour accéder à vos favoris.</p>
+            }
+          </section>
+          <section class="card">
+            <h2>Alertes</h2>
+            @if (session().role === 'user') {
+              <app-content-state [status]="notices.state().status" (retry)="notices.retry()">
+                @if (notices.state().value; as result) {
+                  <p><span class="badge">{{ result.totalNonLues }} non lues</span></p>
+                  <p>{{ result.items[0]?.title ?? 'Aucune notification.' }}</p>
+                }
+              </app-content-state>
+              <p><a routerLink="/alertes" [queryParams]="{ ville: city.id, onglet: 'notifications' }">Voir tout</a></p>
+            } @else {
+              <p class="muted">Ouvrez Compte pour consulter vos alertes.</p>
+            }
+          </section>
+        </div>
+      </div>
+    }
+  </app-content-state>
+  <app-weather-showcase />
+  @if (activeCity.city(); as city) {
+    @for (account of [session()]; track account) { <app-weather-reviews [city]="city" /> }
+    <div class="heading-row">
+      <a class="button button-secondary" routerLink="/previsions" [queryParams]="{ ville: city.id }">
+        Voir les prévisions horaires
+      </a>
+      <details>
+        <summary>Scénario de démonstration</summary>
+        <button class="button button-secondary" type="button" (click)="airSummary()?.simulateFailure()">
+          Simuler une panne air et UV
+        </button>
+      </details>
+    </div>
+  }
+</div>

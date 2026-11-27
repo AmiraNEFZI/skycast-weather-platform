@@ -1,0 +1,165 @@
+<h1 class="page-title">Alertes</h1>
+<div class="form-buttons page-title alerts-nav" role="group" aria-label="Sections des alertes">
+  <button type="button" class="button button-secondary" [attr.aria-pressed]="tab() === 'rules'" (click)="tab.set('rules')">Règles</button>
+  <button type="button" class="button button-secondary" [attr.aria-pressed]="tab() === 'subscriptions'" (click)="tab.set('subscriptions')">Abonnements</button>
+  <button type="button" class="button button-secondary" [attr.aria-pressed]="tab() === 'notifications'" (click)="tab.set('notifications')">
+    Notifications @if (notifications.state().value; as result) {
+      <span class="badge">{{ result.totalNonLues }} {{ result.totalNonLues === 1 ? 'non lue' : 'non lues' }}</span>
+    }
+  </button>
+</div>
+@if (write.done()) { <p role="status">Modifications enregistrées.</p> }
+@if (write.error() && !editing()) { <p class="error-text" role="alert">{{ write.error() }}</p> }
+
+@switch (tab()) {
+  @case ('rules') {
+    <div class="rules-view">
+    <section class="card section-stack">
+      <div class="heading-row"><h2>Mes règles</h2><button #create type="button" class="button" [disabled]="write.busy()" (click)="open(editor, create)">Créer une règle</button></div>
+      <div class="filters">
+        <label>Ville <select #city class="field" (change)="ruleCity.set(city.value)"><option value="">Toutes</option>
+          @for (item of cities(); track item.id) { <option [value]="item.id" [selected]="item.id === ruleCity()">{{ item.name }}</option> }
+        </select></label>
+        <label>État <select #status class="field" [value]="ruleState()" (change)="ruleState.set(status.value)">
+          <option value="">Tous</option><option value="true">Actives</option><option value="false">Inactives</option>
+        </select></label>
+      </div>
+      @if (subscriptions.state().status === 'error') {
+        <div class="heading-row">
+          <p role="alert" class="error-text">Les canaux abonnés sont indisponibles.</p>
+          <button type="button" class="button button-secondary" (click)="subscriptions.retry()">Réessayer</button>
+        </div>
+      }
+      <app-content-state [status]="rules.state().status" (retry)="rules.retry()">
+        @for (rule of filteredRules(); track rule.id) {
+          <article class="rule-card">
+            <div class="rule-heading">
+              <div>
+                <strong>{{ rule.cityName }}</strong>
+                <p class="rule-description">{{ description(rule) }} · {{ rule.source === 'OBSERVATION' ? 'Observation' : 'Prévision' }}</p>
+              </div>
+              <div class="rule-channels muted">
+                @if (subscriptions.state().status === 'success') {
+                  {{ ruleChannels().get(rule.id)?.join(' + ') ?? 'Aucun canal abonné' }}
+                } @else if (subscriptions.state().status === 'loading') {
+                  Chargement des canaux…
+                }
+              </div>
+              <span class="badge" [class.rule-inactive]="!rule.active">{{ rule.active ? 'Active' : 'Inactive' }}</span>
+            </div>
+            <div class="form-buttons rule-actions">
+              <button #modify type="button" class="button button-secondary" [disabled]="write.busy()" (click)="open(editor, modify, rule)">Modifier</button>
+              <button type="button" class="button button-secondary" [disabled]="write.busy()" (click)="write.run(data.toggle(rule.id))">{{ rule.active ? 'Désactiver' : 'Activer' }}</button>
+              <button type="button" class="button button-secondary" (click)="manage(rule.id)">Gérer les canaux</button>
+            </div>
+          </article>
+        } @empty { <p>Aucune règle pour ces filtres.</p> }
+      </app-content-state>
+    </section>
+    <section class="card notice-preview">
+      <div class="heading-row">
+        <h2>Dernière notification</h2>
+        @if (latestNotice()) {
+          <button type="button" class="button button-secondary" (click)="tab.set('notifications')">Voir toutes les notifications</button>
+        }
+      </div>
+      <app-content-state [status]="notifications.state().status" (retry)="notifications.retry()">
+        @if (latestNotice(); as notice) {
+          <ng-container [ngTemplateOutlet]="notificationRow" [ngTemplateOutletContext]="{ $implicit: notice }" />
+        } @else {
+          <p class="muted">Aucune notification reçue.</p>
+        }
+      </app-content-state>
+    </section>
+    </div>
+  }
+  @case ('subscriptions') {
+    <section class="card section-stack">
+      <h2>Mes abonnements</h2>
+      <app-content-state [status]="rules.state().status" (retry)="rules.retry()">
+        <div class="filters">
+          <label>Règle <select #ruleSelection class="field" (change)="manage(ruleSelection.value)">
+            <option value="">Choisir une règle</option>
+            @for (rule of rules.state().value; track rule.id) {
+              <option [value]="rule.id" [selected]="selectedRule() === rule.id">{{ rule.cityName }} · {{ description(rule) }}</option>
+            }
+          </select></label>
+          @for (channel of channelKeys; track channel) {
+            <button type="button" class="button button-secondary" [disabled]="!selectedRule() || channelWrite.busy()" (click)="subscribe(channel)">Abonner · {{ channels[channel] }}</button>
+          }
+        </div>
+      </app-content-state>
+      @if (channelWrite.error()) { <p class="error-text" role="alert">{{ channelWrite.error() }}</p> }
+      @if (channelWrite.done()) { <p role="status">Abonnements mis à jour.</p> }
+      <app-content-state [status]="subscriptions.state().status" (retry)="subscriptions.retry()">
+        @for (sub of subscriptions.state().value; track sub.id) {
+          <div class="heading-row account-row">
+            <span>{{ sub.rule.cityName }} · {{ description(sub.rule) }} · <strong>{{ channels[sub.channel] }}</strong></span>
+            <button type="button" class="button button-secondary" [disabled]="channelWrite.busy()" (click)="unsubscribe(sub.id)">Se désabonner</button>
+          </div>
+        } @empty { <p>Aucun abonnement.</p> }
+      </app-content-state>
+    </section>
+  }
+  @case ('notifications') {
+    <section class="card section-stack">
+      <h2>Mes notifications</h2>
+      <div class="filters">
+        <label>Ville <select #city class="field" (change)="noticeCity.set(city.value)"><option value="">Toutes</option>
+          @for (item of cities(); track item.id) { <option [value]="item.id" [selected]="item.id === noticeCity()">{{ item.name }}</option> }
+        </select></label>
+        <label>Lecture <select #read class="field" [value]="noticeRead()" (change)="noticeRead.set(read.value)">
+          <option value="">Toutes</option><option value="false">Non lues</option><option value="true">Lues</option>
+        </select></label>
+        <label>Canal <select #channel class="field" [value]="noticeChannel()" (change)="noticeChannel.set(channel.value)">
+          <option value="">Tous</option><option value="APPLICATION">Application</option><option value="COURRIEL">Courriel</option>
+        </select></label>
+        <label>Statut <select #delivery class="field" [value]="noticeStatus()" (change)="noticeStatus.set(delivery.value)">
+          <option value="">Tous</option><option value="ENVOYEE">Envoyée</option><option value="ECHEC">Échec</option>
+        </select></label>
+      </div>
+      <app-content-state [status]="notifications.state().status" (retry)="notifications.retry()">
+        @for (notice of filteredNotices(); track notice.id) {
+          <ng-container [ngTemplateOutlet]="notificationRow" [ngTemplateOutletContext]="{ $implicit: notice }" />
+        } @empty { <p>Aucune notification pour ces filtres.</p> }
+      </app-content-state>
+    </section>
+  }
+}
+
+<ng-template #notificationRow let-notice>
+  <div class="account-row">
+    <strong>{{ notice.title }}</strong>
+    <span class="muted">
+      {{ notice.cityName }} · <time [attr.datetime]="notice.date">{{ notice.date | cityDate:notice.timezone }}</time>
+      · {{ channelLabel(notice.channel) }} · {{ notice.status === 'ENVOYEE' ? 'Envoyée' : 'Échec' }}
+      @if (notice.channel === 'APPLICATION') { · {{ notice.read ? 'Lue' : 'Non lue' }} }
+    </span>
+    @if (notice.channel === 'APPLICATION' && !notice.read) {
+      <div><button type="button" class="button button-secondary" [disabled]="write.busy()"
+        (click)="write.run(data.markRead(notice.id))">Marquer comme lue</button></div>
+    }
+  </div>
+</ng-template>
+
+<app-modal #editor label="Règle d’alerte" (closed)="editing.set(undefined)">
+  @if (editing(); as draft) {
+    <form class="profile-form" (submit)="save($event, editor, draft.rule?.id)">
+      <label>Ville <select name="city" class="field" required>
+        @for (item of cities(); track item.id) { <option [value]="item.id" [selected]="item.id === draft.rule?.cityId">{{ item.name }}</option> }
+      </select></label>
+      <label>Mesure <select name="measure" class="field">
+        @for (key of measureKeys; track key) { <option [value]="key" [selected]="key === draft.rule?.measure">{{ measures[key] }}</option> }
+      </select></label>
+      <label>Comparaison <select name="operator" class="field">
+        @for (key of operatorKeys; track key) { <option [value]="key" [selected]="key === draft.rule?.operator">{{ operators[key] }}</option> }
+      </select></label>
+      <label>Seuil (°C, % ou km/h selon la mesure) <input name="threshold" class="field" type="number" step="any" required [value]="draft.rule?.threshold ?? ''" /></label>
+      <label>Source <select name="source" class="field" [value]="draft.rule?.source ?? 'OBSERVATION'">
+        <option value="OBSERVATION">Observation</option><option value="PREVISION">Prévision</option>
+      </select></label>
+      @if (write.error()) { <p class="error-text" role="alert">{{ write.error() }}</p> }
+      <button type="submit" class="button" [disabled]="write.busy() || !cities().length">Enregistrer la règle</button>
+    </form>
+  }
+</app-modal>

@@ -1,0 +1,71 @@
+<h1>Cartes</h1>
+
+<app-content-state [status]="activeCity.state().status" errorMessage="La fiche ville est indisponible."
+  (retry)="activeCity.retry()">
+  @if (activeCity.city(); as city) {
+    <section class="card city-card" aria-labelledby="city-title">
+      <h2 id="city-title">{{ city.name }}, {{ city.country }}</h2>
+      <dl>
+        <div><dt>Latitude</dt><dd>{{ city.latitude | number:'1.4-4':'fr' }}°</dd></div>
+        <div><dt>Longitude</dt><dd>{{ city.longitude | number:'1.4-4':'fr' }}°</dd></div>
+        <div><dt>Fuseau horaire</dt><dd>{{ city.timezone }}</dd></div>
+      </dl>
+    </section>
+
+    <div class="maps-layout">
+      <section class="card proximity" aria-labelledby="nearby-title">
+        <div class="nearby-heading">
+          <h2 id="nearby-title">Villes à proximité</h2>
+          <div class="radius-picker">
+            <label for="rayon">Rayon</label>
+            <select #radiusInput id="rayon" class="field" [value]="radius()"
+              (change)="radius.set(+radiusInput.value)">
+              @for (option of radii; track option) { <option [value]="option" [selected]="option === radius()">{{ option }} km</option> }
+            </select>
+          </div>
+        </div>
+        <div class="map-content">
+          <figure>
+            <div class="map">
+              @if (region()) { <canvas #geography width="640" height="640" aria-hidden="true"></canvas> }
+              <span class="north" aria-hidden="true">↑ N</span>
+              <span class="radius-ring" aria-hidden="true"></span>
+              <span class="marker center" aria-hidden="true" [title]="city.name">●</span>
+              @for (marker of markers(city); track marker.city.id; let index = $index) {
+                <span class="marker" aria-hidden="true" [style.left.%]="marker.x" [style.top.%]="marker.y"
+                  [title]="marker.city.name">{{ index + 1 }}</span>
+              }
+              <div class="zoom" role="group" aria-label="Zoom sur le rayon de proximité">
+                <button type="button" aria-label="Zoom avant" [disabled]="radius() === radii[0]" (click)="stepRadius(-1)">+</button>
+                <button type="button" aria-label="Zoom arrière" [disabled]="radius() === radii[radii.length - 1]" (click)="stepRadius(1)">−</button>
+              </div>
+              <span class="map-scale" aria-hidden="true">{{ radius() * .4 | number:'1.0-1':'fr' }} km</span>
+            </div>
+            <figcaption class="muted">{{ region() ? 'Fond simplifié · Natural Earth' : 'Carte schématique' }} · centre {{ city.name }} · rayon {{ radius() }} km</figcaption>
+          </figure>
+          <div class="nearby-list">
+            <app-content-state [status]="proximity().status" loadingMessage="Recherche des villes proches…"
+              emptyMessage="Aucune autre ville dans ce rayon. Essaie un rayon plus large ou cherche une autre ville."
+              errorMessage="Les villes proches sont indisponibles." (retry)="retryProximity()">
+              <ol>
+                @for (entry of proximity().entries; track entry.city.id) {
+                  <li>
+                    <button class="button button-secondary" type="button" (click)="activeCity.select(entry.city.id)">
+                      <strong>{{ entry.city.name }}</strong>
+                      <span>{{ entry.distanceKm | number:'1.1-1':'fr' }} km</span>
+                    </button>
+                  </li>
+                }
+              </ol>
+            </app-content-state>
+          </div>
+        </div>
+      </section>
+      <aside class="card actions" aria-labelledby="actions-title">
+        <h2 id="actions-title">Actions</h2>
+        <a class="button" href="#recherche-ville">Rechercher une autre ville</a>
+        <app-position-action [simulation]="true" />
+      </aside>
+    </div>
+  }
+</app-content-state>

@@ -1,0 +1,32 @@
+:host { display: flex; flex-direction: column; min-height: 100dvh; }
+.frame { width: min(calc(100% - 3rem), 76rem); margin-inline: auto; }
+.header, .footer { background: var(--surface); }
+.header { border-bottom: 1px solid var(--line); }
+.header-inner, .footer-inner { display: flex; align-items: center; gap: 1rem; }
+.header-inner { min-height: 4.75rem; padding-block: .7rem; }
+.footer { border-top: 1px solid var(--line); }
+.footer-inner { justify-content: space-between; min-height: 4.5rem; flex-wrap: wrap; padding-block: .75rem; }
+.footer p { margin: 0; color: var(--muted); }
+.footer strong { color: var(--text); }
+.content { flex: 1; padding-block: clamp(1.5rem, 4vw, 3rem); }
+.city-notice { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-bottom: 1rem; }
+.brand { display: inline-flex; align-items: center; gap: .35rem; color: var(--text); font-size: 1.35rem; font-weight: 800; text-decoration: none; }
+.brand-mark { font-size: 1.55rem; }
+nav { display: flex; align-items: center; gap: .18rem; }
+nav a { padding: .5rem .6rem; border-radius: .55rem; font-size: .875rem; white-space: nowrap; color: var(--text); text-decoration: none; }
+nav a.active, nav a:hover { background: var(--accent-soft); color: var(--accent-text); }
+.search { width: min(15rem, 100%); margin-inline-start: auto; }
+.menu-button { display: none; }
+.theme-picker { display: flex; gap: .8rem; border: 0; padding: 0; margin: 0; }
+.theme-picker label { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; font-size: .875rem; }
+.theme-picker input { accent-color: var(--accent); }
+
+@media (max-width: 66rem) {
+  .frame { width: calc(100% - 2rem); }
+  .header-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .6rem; }
+  .menu-button { display: inline-flex; }
+  .account { grid-column: 3; grid-row: 1; }
+  .search { width: 100%; grid-column: 1 / -1; grid-row: 2; }
+  nav { display: none; grid-column: 1 / -1; flex-wrap: wrap; }
+  nav.menu-open { display: flex; }
+}
